@@ -124,7 +124,8 @@ sed -i 's|com\.moonshot\.kimiclaw|org.openclaw.agent|g' res/values/strings.xml
 # =====================
 echo "[patch] Adding API Config to termux_preferences.xml..."
 if [ -f res/xml/termux_preferences.xml ]; then
-  sed -i '/<\/PreferenceScreen>/i\    <Preference app:summary="Configure API providers and keys" app:title="API Configuration">\n        <intent android:action="org.openclaw.agent.action.API_CONFIG" android:targetClassName="org.openclaw.agent.ApiConfigActivity" android:targetPackage="org.openclaw.agent" />\n    </Preference>' res/xml/termux_preferences.xml
+  sed -i 's|<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">|<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">|' res/xml/termux_preferences.xml
+  sed -i '/<\/PreferenceScreen>/i\    <Preference app:summary="Configure API providers and keys" app:title="API Configuration">\n        <intent android:action="org.openclaw.agent.action.API_CONFIG" android:targetClass="org.openclaw.agent.ApiConfigActivity" android:targetPackage="org.openclaw.agent" />\n    </Preference>' res/xml/termux_preferences.xml
 fi
 
 # =====================
