@@ -49,9 +49,18 @@ jobs:
             -alias debug -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
             -dname "CN=OpenClaw Agent, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=US"
-          apksigner sign --ks /tmp/debug.keystore \
-            --ks-pass pass:android --ks-key-alias debug \
-            --out openclaw-agent.apk /tmp/unsigned.apk
+          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name apksigner 2>/dev/null | head -1)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" sign --ks /tmp/debug.keystore \
+              --ks-pass pass:android --ks-key-alias debug \
+              --out openclaw-agent.apk /tmp/unsigned.apk
+          else
+            # Fallback: use apksigner from PATH or install build-tools
+            yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;35.0.0" > /dev/null 2>&1
+            /usr/local/lib/android/sdk/build-tools/35.0.0/apksigner sign --ks /tmp/debug.keystore \
+              --ks-pass pass:android --ks-key-alias debug \
+              --out openclaw-agent.apk /tmp/unsigned.apk
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
