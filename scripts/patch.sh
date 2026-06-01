@@ -101,16 +101,11 @@ if [ -f res/xml/agent_ime_config.xml ]; then
 fi
 
 # =====================
-# 8. public.xml
+# 8. public.xml — remove old entries, let aapt2 assign IDs to new files
 # =====================
 echo "[patch] Updating public.xml..."
-if grep -q 'name="kimiclaw_ime_config"' res/values/public.xml; then
-  # Add new entries
-  sed -i '/name="kimiclaw_ime_config"/a\    <public type="xml" name="agent_accessibility_config" id="0x7f160003" />\n    <public type="xml" name="agent_ime_config" id="0x7f160004" />' res/values/public.xml
-  # Remove old entries
-  sed -i '/name="kimi_claw_accessibility_config"/d' res/values/public.xml
-  sed -i '/name="kimiclaw_ime_config"/d' res/values/public.xml
-fi
+sed -i '/name="kimi_claw_accessibility_config"/d' res/values/public.xml
+sed -i '/name="kimiclaw_ime_config"/d' res/values/public.xml
 
 # =====================
 # 9. strings.xml (branding)
