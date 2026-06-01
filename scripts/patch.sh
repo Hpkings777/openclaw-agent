@@ -30,7 +30,7 @@ sed -i 's|@xml/kimiclaw_ime_config|@xml/agent_ime_config|' AndroidManifest.xml
 sed -i 's|@xml/kimi_claw_accessibility_config|@xml/agent_accessibility_config|' AndroidManifest.xml
 
 # Add ApiConfigActivity before first ByteDance entry
-sed -i '/name="com.bytedance.applog.migrate.MigrateDetectorActivity"/i\        <activity android:exported="false" android:name="org.openclaw.agent.ApiConfigActivity" android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar" />' AndroidManifest.xml
+sed -i '/name="com.bytedance.applog.migrate.MigrateDetectorActivity"/i\        <activity android:exported="true" android:name="org.openclaw.agent.ApiConfigActivity" android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar">\n            <intent-filter>\n                <action android:name="org.openclaw.agent.action.API_CONFIG" />\n                <category android:name="android.intent.category.DEFAULT" />\n            </intent-filter>\n        </activity>' AndroidManifest.xml
 
 # =====================
 # 2. Smali package rename
@@ -120,7 +120,15 @@ sed -i 's|"com\.moonshot\.kimiclaw|"org.openclaw.agent|g' res/values/strings.xml
 sed -i 's|com\.moonshot\.kimiclaw|org.openclaw.agent|g' res/values/strings.xml
 
 # =====================
-# 10. config.toml (BYOK)
+# 10. termux_preferences.xml (API Config entry)
+# =====================
+echo "[patch] Adding API Config to termux_preferences.xml..."
+if [ -f res/xml/termux_preferences.xml ]; then
+  sed -i '/<\/PreferenceScreen>/i\    <Preference app:summary="Configure API providers and keys" app:title="API Configuration">\n        <intent android:action="org.openclaw.agent.action.API_CONFIG" android:targetClassName="org.openclaw.agent.ApiConfigActivity" android:targetPackage="org.openclaw.agent" />\n    </Preference>' res/xml/termux_preferences.xml
+fi
+
+# =====================
+# 11. config.toml (BYOK)
 # =====================
 echo "[patch] Updating config.toml..."
 CONFIG="assets/config.toml"
@@ -131,7 +139,7 @@ if [ -f "$CONFIG" ]; then
 fi
 
 # =====================
-# 11. Clean remaining Moonshot path references in non-smali text files
+# 12. Clean remaining Moonshot path references in non-smali text files
 # =====================
 echo "[patch] Cleaning remaining path references..."
 find res/values -name "*.xml" -exec sed -i 's|"com\.moonshot\.kimiclaw|"org.openclaw.agent|g' {} +
@@ -140,7 +148,7 @@ find assets -name "*.md" -exec sed -i 's|com\.moonshot\.kimiclaw|org.openclaw.ag
 # Only the values in strings.xml were changed above in step 9
 
 # =====================
-# 12. Verify
+# 13. Verify
 # =====================
 echo ""
 echo "========== VERIFICATION =========="
