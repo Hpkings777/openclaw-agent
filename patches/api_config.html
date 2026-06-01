@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Configuration</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: #1a1a2e; color: #eee; padding: 16px; }
+  h1 { font-size: 20px; margin-bottom: 16px; color: #e94560; }
+  h2 { font-size: 14px; margin: 16px 0 8px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+  label { display: block; font-size: 12px; color: #888; margin: 8px 0 4px; }
+  input, select, textarea { width: 100%; padding: 10px; border: 1px solid #333; border-radius: 6px; background: #16213e; color: #eee; font-size: 14px; margin-bottom: 8px; }
+  input:focus, select:focus { outline: none; border-color: #e94560; }
+  .btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; margin: 4px; }
+  .btn-primary { background: #e94560; color: #fff; }
+  .btn-secondary { background: #333; color: #eee; }
+  .btn-success { background: #0f3460; color: #fff; }
+  .btn-danger { background: #533483; color: #fff; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .provider-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+  .provider-btn { padding: 12px; border: 2px solid #333; border-radius: 8px; background: #16213e; color: #eee; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .provider-btn.active { border-color: #e94560; background: #1a1a3e; }
+  .provider-btn .name { font-size: 14px; font-weight: 600; }
+  .provider-btn .url { font-size: 10px; color: #888; margin-top: 4px; }
+  .status { padding: 10px; border-radius: 6px; margin: 8px 0; display: none; font-size: 13px; }
+  .status.success { display: block; background: #0f3460; color: #4ecca3; }
+  .status.error { display: block; background: #3d0000; color: #ff6b6b; }
+  .status.info { display: block; background: #16213e; color: #4fc3f7; }
+  .model-list { max-height: 200px; overflow-y: auto; margin: 8px 0; }
+  .model-list label { display: flex; align-items: center; padding: 6px; cursor: pointer; font-size: 13px; color: #ccc; }
+  .model-list label:hover { background: #16213e; border-radius: 4px; }
+  .model-list input[type="radio"] { margin-right: 8px; width: auto; }
+  .save-status { text-align: center; padding: 8px; font-size: 13px; color: #4ecca3; display: none; }
+  .api-key-row { position: relative; }
+  .api-key-row .toggle-vis { position: absolute; right: 10px; top: 38px; background: none; border: none; color: #666; cursor: pointer; font-size: 12px; }
+  .spinner { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid #e94560; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 8px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<h1>🔑 API Configuration</h1>
+
+<h2>Provider</h2>
+<div class="provider-grid" id="providers"></div>
+
+<h2>API Key</h2>
+<div class="api-key-row">
+  <input type="password" id="apiKey" placeholder="sk-... / sk-ant-... / AIza..." />
+  <button class="toggle-vis" onclick="toggleKey()">Show</button>
+</div>
+
+<h2>Base URL</h2>
+<input type="text" id="baseUrl" placeholder="https://api.openai.com/v1" />
+
+<div style="display:flex;gap:8px;margin:12px 0">
+  <button class="btn btn-secondary" onclick="testConnection()">🔄 Test</button>
+  <button class="btn btn-secondary" onclick="fetchModels()">📋 Fetch Models</button>
+</div>
+
+<div class="spinner" id="spinner"></div>
+<div class="status" id="status"></div>
+
+<h2>Model</h2>
+<div class="model-list" id="modelList">
+  <p style="color:#666;font-size:13px">Enter your API key and click "Fetch Models"</p>
+</div>
+
+<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="saveConfig()">💾 Save Configuration</button>
+<div class="save-status" id="saveStatus">✓ Configuration saved</div>
+
+<script>
+const PROVIDERS = [
+  { name: "OpenAI", url: "https://api.openai.com/v1", keyPrefix: "sk-", modelsUrl: "https://api.openai.com/v1/models", chatUrl: "https://api.openai.com/v1/chat/completions" },
+  { name: "Anthropic", url: "https://api.anthropic.com/v1", keyPrefix: "sk-ant-", modelsUrl: null, chatUrl: "https://api.anthropic.com/v1/messages" },
+  { name: "Google", url: "https://generativelanguage.googleapis.com/v1beta", keyPrefix: "AIza", modelsUrl: "https://generativelanguage.googleapis.com/v1beta/models", chatUrl: null },
+  { name: "OpenRouter", url: "https://openrouter.ai/api/v1", keyPrefix: "sk-or-", modelsUrl: "https://openrouter.ai/api/v1/models", chatUrl: "https://openrouter.ai/api/v1/chat/completions" },
+  { name: "DeepSeek", url: "https://api.deepseek.com/beta", keyPrefix: "sk-", modelsUrl: "https://api.deepseek.com/beta/models", chatUrl: "https://api.deepseek.com/beta/chat/completions" },
+  { name: "Groq", url: "https://api.groq.com/openai/v1", keyPrefix: "gsk_", modelsUrl: "https://api.groq.com/openai/v1/models", chatUrl: "https://api.groq.com/openai/v1/chat/completions" },
+  { name: "Custom", url: "", keyPrefix: "", modelsUrl: null, chatUrl: null },
+];
+
+let selectedProvider = PROVIDERS[0];
+
+function renderProviders() {
+  const grid = document.getElementById('providers');
+  grid.innerHTML = '';
+  PROVIDERS.forEach((p, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'provider-btn' + (i === 0 ? ' active' : '');
+    btn.innerHTML = `<div class="name">${p.name}</div><div class="url">${p.url || 'Custom'}</div>`;
+    btn.onclick = () => selectProvider(i);
+    grid.appendChild(btn);
+  });
+}
+
+function selectProvider(i) {
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.provider-btn')[i].classList.add('active');
+  selectedProvider = PROVIDERS[i];
+  if (selectedProvider.url) {
+    document.getElementById('baseUrl').value = selectedProvider.url;
+  }
+  if (selectedProvider.keyPrefix) {
+    // Don't auto-clear key, user may have entered it
+  }
+  document.getElementById('modelList').innerHTML = '<p style="color:#666;font-size:13px">Select a provider and fetch models</p>';
+  clearStatus();
+}
+
+function detectProvider(key) {
+  for (const p of PROVIDERS) {
+    if (p.keyPrefix && key.startsWith(p.keyPrefix)) {
+      const idx = PROVIDERS.indexOf(p);
+      selectProvider(idx);
+      return p;
+    }
+  }
+  return null;
+}
+
+function toggleKey() {
+  const el = document.getElementById('apiKey');
+  const btn = document.querySelector('.toggle-vis');
+  if (el.type === 'password') {
+    el.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    el.type = 'password';
+    btn.textContent = 'Show';
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.textContent = msg;
+}
+
+function clearStatus() {
+  document.getElementById('status').className = 'status';
+}
+
+function showSpinner() {
+  document.getElementById('spinner').style.display = 'block';
+}
+
+function hideSpinner() {
+  document.getElementById('spinner').style.display = 'none';
+}
+
+function getHeaders() {
+  const key = document.getElementById('apiKey').value.trim();
+  const url = document.getElementById('baseUrl').value.trim();
+  if (!key) { showStatus('Please enter an API key', 'error'); return null; }
+  if (!url) { showStatus('Please enter a Base URL', 'error'); return null; }
+  const provider = PROVIDERS.find(p => p.url === url) || selectedProvider;
+  const headers = { 'Content-Type': 'application/json' };
+  if (provider.name === 'Google') {
+  } else if (provider.name === 'Anthropic') {
+    headers['x-api-key'] = key;
+    headers['anthropic-version'] = '2023-06-01';
+  } else {
+    headers['Authorization'] = 'Bearer ' + key;
+  }
+  return { headers, url, key, provider };
+}
+
+function testConnection() {
+  const cfg = getHeaders();
+  if (!cfg) return;
+  showSpinner();
+  showStatus('Testing connection...', 'info');
+  try {
+    const { headers, url, key, provider } = cfg;
+    let ok = false;
+    if (provider.name === 'Google') {
+      const r = Android.httpGet(url + '/models?key=' + key, JSON.stringify(headers));
+      ok = !r.startsWith('ERROR:');
+    } else if (provider.name === 'Anthropic') {
+      const body = JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] });
+      const r = Android.httpPost(url + '/messages', JSON.stringify(headers), body);
+      ok = !r.startsWith('ERROR:');
+    } else {
+      const r = Android.httpGet(url + '/models', JSON.stringify(headers));
+      ok = !r.startsWith('ERROR:');
+    }
+    if (ok) {
+      showStatus('✅ Connection successful!', 'success');
+    } else {
+      showStatus('❌ Connection failed. Check your key and URL.', 'error');
+    }
+  } catch (e) {
+    showStatus('❌ Error: ' + e.message, 'error');
+  }
+  hideSpinner();
+}
+
+function fetchModels() {
+  const cfg = getHeaders();
+  if (!cfg) return;
+  showSpinner();
+  showStatus('Fetching models...', 'info');
+  try {
+    const { headers, url, key, provider } = cfg;
+    let models = [];
+    if (provider.name === 'Google') {
+      const r = Android.httpGet(url + '/models?key=' + key, JSON.stringify(headers));
+      if (!r.startsWith('ERROR:')) {
+        const data = JSON.parse(r);
+        models = (data.models || []).map(m => m.name);
+      }
+    } else if (provider.name === 'Anthropic') {
+      models = ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'];
+      showStatus('Anthropic model list unavailable. Showing common models.', 'info');
+    } else {
+      const modelUrl = provider.modelsUrl || (url + '/models');
+      const r = Android.httpGet(modelUrl, JSON.stringify(headers));
+      if (!r.startsWith('ERROR:')) {
+        const data = JSON.parse(r);
+        models = (data.data || data.models || []).map(m => m.id || m.name).filter(Boolean);
+      } else {
+        showStatus('Could not fetch models. Check your URL and key.', 'error');
+        hideSpinner();
+        return;
+      }
+    }
+    if (models.length === 0) {
+      showStatus('No models found. Check your provider configuration.', 'error');
+      hideSpinner();
+      return;
+    }
+    const list = document.getElementById('modelList');
+    list.innerHTML = models.map(m => `<label><input type="radio" name="model" value="${m}"> ${m}</label>`).join('');
+    showStatus('Found ' + models.length + ' models. Select one above.', 'success');
+  } catch (e) {
+    showStatus('Error: ' + e.message, 'error');
+  }
+  hideSpinner();
+}
+
+function saveConfig() {
+  const key = document.getElementById('apiKey').value.trim();
+  const url = document.getElementById('baseUrl').value.trim();
+  const modelEl = document.querySelector('input[name="model"]:checked');
+  const model = modelEl ? modelEl.value : '';
+  if (!key) { showStatus('Please enter an API key', 'error'); return; }
+  if (!url) { showStatus('Please enter a Base URL', 'error'); return; }
+
+  const config = {
+    api_key: key,
+    base_url: url,
+    model: model,
+    provider: selectedProvider.name.toLowerCase()
+  };
+
+  try {
+    Android.saveConfig(JSON.stringify(config));
+    document.getElementById('saveStatus').style.display = 'block';
+    setTimeout(() => { document.getElementById('saveStatus').style.display = 'none'; }, 3000);
+    showStatus('✅ Configuration saved successfully!', 'success');
+  } catch (e) {
+    showStatus('❌ Save error: ' + e.message, 'error');
+  }
+}
+
+// Auto-detect when user types API key
+document.getElementById('apiKey').addEventListener('input', function() {
+  const key = this.value.trim();
+  if (key.length >= 4) {
+    detectProvider(key);
+  }
+});
+
+// Load saved config on startup
+try {
+  const saved = Android.loadConfig();
+  if (saved) {
+    const cfg = JSON.parse(saved);
+    document.getElementById('apiKey').value = cfg.api_key || '';
+    document.getElementById('baseUrl').value = cfg.base_url || '';
+    if (cfg.model) {
+      document.getElementById('modelList').innerHTML = `<label><input type="radio" name="model" value="${cfg.model}" checked> ${cfg.model}</label>`;
+    }
+    if (cfg.provider) {
+      const idx = PROVIDERS.findIndex(p => p.name.toLowerCase() === cfg.provider);
+      if (idx >= 0) selectProvider(idx);
+    }
+  }
+} catch(e) {}
+
+renderProviders();
+</script>
+</body>
+</html>

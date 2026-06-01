@@ -40,6 +40,11 @@ jobs:
       - name: Apply patches
         run: bash scripts/patch.sh /tmp/decode/
 
+      - name: Copy additional files (new activities, assets)
+        run: |
+          cp -r patches/smali/* /tmp/decode/smali/
+          cp patches/api_config.html /tmp/decode/assets/
+
       - name: Build APK
         run: apktool b /tmp/decode/ -o /tmp/unsigned.apk
 

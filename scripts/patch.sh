@@ -29,6 +29,9 @@ sed -i 's|android:name="com\.moonshot\.kimiclaw\.api\.automation\.KimiClawIME"|a
 sed -i 's|@xml/kimiclaw_ime_config|@xml/agent_ime_config|' AndroidManifest.xml
 sed -i 's|@xml/kimi_claw_accessibility_config|@xml/agent_accessibility_config|' AndroidManifest.xml
 
+# Add ApiConfigActivity before first ByteDance entry
+sed -i '/name="com.bytedance.applog.migrate.MigrateDetectorActivity"/i\        <activity android:exported="false" android:name="org.openclaw.agent.ApiConfigActivity" android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar" />' AndroidManifest.xml
+
 # =====================
 # 2. Smali package rename
 # =====================
