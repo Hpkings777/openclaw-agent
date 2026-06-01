@@ -128,15 +128,13 @@ if [ -f "$CONFIG" ]; then
 fi
 
 # =====================
-# 11. Additional branding in other resource files
+# 11. Clean remaining Moonshot path references in non-smali text files
 # =====================
-echo "[patch] Cleaning any remaining Kimi/Moonshot references..."
-grep -rl "KimiClaw\|kimi_claw\|kimiclaw" res/ 2>/dev/null | while read -r f; do
-  sed -i 's|KimiClaw|OpenClaw Agent|g; s|kimi_claw|agent|g; s|kimiclaw|agent|g' "$f"
-done
-grep -rl "KimiClaw\|kimi_claw\|kimiclaw" assets/ 2>/dev/null | while read -r f; do
-  sed -i 's|KimiClaw|OpenClaw Agent|g; s|kimi_claw|agent|g; s|kimiclaw|agent|g' "$f"
-done
+echo "[patch] Cleaning remaining path references..."
+find res/values -name "*.xml" -exec sed -i 's|"com\.moonshot\.kimiclaw|"org.openclaw.agent|g' {} +
+find assets -name "*.md" -exec sed -i 's|com\.moonshot\.kimiclaw|org.openclaw.agent|g' {} +
+# Note: resource NAMES (drawable/kimiclaw, raw/kimiclaw, etc.) are kept as-is
+# Only the values in strings.xml were changed above in step 9
 
 # =====================
 # 12. Verify
